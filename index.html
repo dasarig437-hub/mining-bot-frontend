@@ -19,11 +19,11 @@
     }
 
     h1 {
-      margin-top: 40px;
+      margin-top: 30px;
     }
 
     .card {
-      margin: 40px auto;
+      margin: 30px auto;
       padding: 20px;
       max-width: 320px;
       background: #1c1c1c;
@@ -33,6 +33,23 @@
     .value {
       font-size: 18px;
       margin: 10px 0;
+    }
+
+    .btn {
+      margin-top: 20px;
+      padding: 15px;
+      width: 100%;
+      font-size: 18px;
+      background: gold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn:disabled {
+      background: #555;
+      cursor: not-allowed;
     }
 
     .error {
@@ -48,6 +65,8 @@
     <p id="status">Loading...</p>
     <div id="balance" class="value"></div>
     <div id="energy" class="value"></div>
+
+    <button id="mineBtn" class="btn" onclick="mine()">MINE ⛏️</button>
   </div>
 
   <script>
@@ -58,28 +77,31 @@
     const statusEl = document.getElementById("status");
     const balanceEl = document.getElementById("balance");
     const energyEl = document.getElementById("energy");
+    const mineBtn = document.getElementById("mineBtn");
+
+    let energy = 0;
 
     async function loadProfile() {
-      // Not opened inside Telegram
       if (!tg.initData) {
         statusEl.innerText = "Not opened inside Telegram";
         statusEl.className = "error";
+        mineBtn.disabled = true;
         return;
       }
 
       try {
-        const response = await fetch("http://127.0.0.1:8000/me", {
-          method: "GET",
+        const res = await fetch("http://127.0.0.1:8000/me", {
           headers: {
             "X-Telegram-Init-Data": tg.initData
           }
         });
 
-        const data = await response.json();
+        const data = await res.json();
 
-        if (!response.ok) {
-          statusEl.innerText = data.detail || "Authentication failed";
+        if (!res.ok) {
+          statusEl.innerText = data.detail || "Auth failed";
           statusEl.className = "error";
+          mineBtn.disabled = true;
           return;
         }
 
@@ -89,9 +111,49 @@
         balanceEl.innerText = `Balance: ${data.balance}`;
         energyEl.innerText = `Energy: ${data.energy}`;
 
-      } catch (err) {
+        energy = data.energy;
+        mineBtn.disabled = energy <= 0;
+
+      } catch {
         statusEl.innerText = "Backend not reachable";
         statusEl.className = "error";
+        mineBtn.disabled = true;
+      }
+    }
+
+    async function mine() {
+      if (energy <= 0) {
+        mineBtn.disabled = true;
+        return;
+      }
+
+      mineBtn.disabled = true;
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/mine", {
+          method: "POST",
+          headers: {
+            "X-Telegram-Init-Data": tg.initData
+          }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          statusEl.innerText = data.detail || "Mining failed";
+          mineBtn.disabled = false;
+          return;
+        }
+
+        balanceEl.innerText = `Balance: ${data.balance}`;
+        energyEl.innerText = `Energy: ${data.energy}`;
+        energy = data.energy;
+
+        mineBtn.disabled = energy <= 0;
+
+      } catch {
+        statusEl.innerText = "Network error";
+        mineBtn.disabled = false;
       }
     }
 
