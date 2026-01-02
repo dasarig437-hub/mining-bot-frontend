@@ -16,11 +16,7 @@
       color: white;
       text-align: center;
     }
-
-    h1 {
-      margin-top: 30px;
-    }
-
+    h1 { margin-top: 30px; }
     .card {
       margin: 30px auto;
       padding: 20px;
@@ -28,12 +24,7 @@
       background: #1c1c1c;
       border-radius: 12px;
     }
-
-    .value {
-      font-size: 18px;
-      margin: 10px 0;
-    }
-
+    .value { font-size: 18px; margin: 10px 0; }
     .btn {
       margin-top: 15px;
       padding: 15px;
@@ -44,103 +35,94 @@
       font-weight: bold;
       border: none;
     }
-
-    .mine {
-      background: gold;
-    }
-
-    .refill {
-      background: #00aaff;
-      color: white;
-    }
-
-    .disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-
-    .error {
-      color: #ff6b6b;
-    }
+    .mine { background: gold; }
+    .refill { background: #00aaff; color: white; }
   </style>
 </head>
+
 <body>
 
-  <h1>⛏️ Mining Bot</h1>
+<h1>⛏️ Mining Bot</h1>
 
-  <div class="card">
-    <p id="status">Loading...</p>
-    <div id="balance" class="value"></div>
-    <div id="energy" class="value"></div>
+<div class="card">
+  <p id="status">Loading...</p>
+  <div id="balance" class="value"></div>
+  <div id="energy" class="value"></div>
 
-    <button id="mineBtn" class="btn mine" onclick="mine()">MINE ⛏️</button>
-    <button id="refillBtn" class="btn refill" onclick="refill()">🔋 Refill Energy</button>
-  </div>
+  <button id="mineBtn" class="btn mine">MINE ⛏️</button>
+  <button id="refillBtn" class="btn refill">🔋 Refill Energy</button>
+</div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
 
-    const statusEl = document.getElementById("status");
-    const balanceEl = document.getElementById("balance");
-    const energyEl = document.getElementById("energy");
-    const mineBtn = document.getElementById("mineBtn");
+  // 🔴 CHANGE THIS TO YOUR NGROK URL
+  const API_URL = "https://unexhortative-unsupplemental-dorotha.ngrok-free.app";
 
-    let energy = 0;
+  const statusEl = document.getElementById("status");
+  const balanceEl = document.getElementById("balance");
+  const energyEl = document.getElementById("energy");
+  const mineBtn = document.getElementById("mineBtn");
+  const refillBtn = document.getElementById("refillBtn");
 
-    async function loadProfile() {
-      if (!tg.initData) {
-        statusEl.innerText = "Not opened inside Telegram";
-        mineBtn.disabled = true;
-        return;
-      }
+  let energy = 0;
 
-      const res = await fetch("http://127.0.0.1:8000/me", {
-        headers: { "X-Telegram-Init-Data": tg.initData }
-      });
-
-      const data = await res.json();
-
-      statusEl.innerText = "Account Loaded";
-      balanceEl.innerText = `Balance: ${data.balance}`;
-      energyEl.innerText = `Energy: ${data.energy}`;
-      energy = data.energy;
-
-      mineBtn.disabled = energy <= 0;
+  async function loadProfile() {
+    if (!tg.initData) {
+      statusEl.innerText = "Not opened inside Telegram";
+      return;
     }
 
-    async function mine() {
-      if (energy <= 0) return;
+    const res = await fetch(`${API_URL}/me`, {
+      headers: { "X-Telegram-Init-Data": tg.initData }
+    });
 
-      const res = await fetch("http://127.0.0.1:8000/mine", {
-        method: "POST",
-        headers: { "X-Telegram-Init-Data": tg.initData }
-      });
+    const data = await res.json();
 
-      const data = await res.json();
+    statusEl.innerText = "Account Loaded";
+    balanceEl.innerText = `Balance: ${data.balance}`;
+    energyEl.innerText = `Energy: ${data.energy}`;
+    energy = data.energy;
 
-      balanceEl.innerText = `Balance: ${data.balance}`;
-      energyEl.innerText = `Energy: ${data.energy}`;
-      energy = data.energy;
+    mineBtn.disabled = energy <= 0;
+  }
 
-      mineBtn.disabled = energy <= 0;
-    }
+  async function mine() {
+    if (energy <= 0) return;
 
-    async function refill() {
-      const res = await fetch("http://127.0.0.1:8000/refill", {
-        method: "POST",
-        headers: { "X-Telegram-Init-Data": tg.initData }
-      });
+    const res = await fetch(`${API_URL}/mine`, {
+      method: "POST",
+      headers: { "X-Telegram-Init-Data": tg.initData }
+    });
 
-      const data = await res.json();
-      energy = data.energy;
-      energyEl.innerText = `Energy: ${energy}`;
-      mineBtn.disabled = false;
-    }
+    const data = await res.json();
 
-    loadProfile();
-  </script>
+    balanceEl.innerText = `Balance: ${data.balance}`;
+    energyEl.innerText = `Energy: ${data.energy}`;
+    energy = data.energy;
+
+    mineBtn.disabled = energy <= 0;
+  }
+
+  async function refill() {
+    const res = await fetch(`${API_URL}/refill`, {
+      method: "POST",
+      headers: { "X-Telegram-Init-Data": tg.initData }
+    });
+
+    const data = await res.json();
+    energy = data.energy;
+    energyEl.innerText = `Energy: ${energy}`;
+    mineBtn.disabled = false;
+  }
+
+  mineBtn.onclick = mine;
+  refillBtn.onclick = refill;
+
+  loadProfile();
+</script>
 
 </body>
 </html>
