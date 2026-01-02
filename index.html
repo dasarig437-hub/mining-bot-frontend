@@ -5,7 +5,6 @@
   <title>Mining Bot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Telegram Mini App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
@@ -36,18 +35,26 @@
     }
 
     .btn {
-      margin-top: 20px;
+      margin-top: 15px;
       padding: 15px;
       width: 100%;
-      font-size: 18px;
-      background: gold;
-      border: none;
+      font-size: 16px;
       border-radius: 10px;
       cursor: pointer;
       font-weight: bold;
+      border: none;
     }
 
-    .btn:disabled {
+    .mine {
+      background: gold;
+    }
+
+    .refill {
+      background: #00aaff;
+      color: white;
+    }
+
+    .disabled {
       background: #555;
       cursor: not-allowed;
     }
@@ -66,7 +73,8 @@
     <div id="balance" class="value"></div>
     <div id="energy" class="value"></div>
 
-    <button id="mineBtn" class="btn" onclick="mine()">MINE ⛏️</button>
+    <button id="mineBtn" class="btn mine" onclick="mine()">MINE ⛏️</button>
+    <button id="refillBtn" class="btn refill" onclick="refill()">🔋 Refill Energy</button>
   </div>
 
   <script>
@@ -84,77 +92,51 @@
     async function loadProfile() {
       if (!tg.initData) {
         statusEl.innerText = "Not opened inside Telegram";
-        statusEl.className = "error";
         mineBtn.disabled = true;
         return;
       }
 
-      try {
-        const res = await fetch("http://127.0.0.1:8000/me", {
-          headers: {
-            "X-Telegram-Init-Data": tg.initData
-          }
-        });
+      const res = await fetch("http://127.0.0.1:8000/me", {
+        headers: { "X-Telegram-Init-Data": tg.initData }
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!res.ok) {
-          statusEl.innerText = data.detail || "Auth failed";
-          statusEl.className = "error";
-          mineBtn.disabled = true;
-          return;
-        }
+      statusEl.innerText = "Account Loaded";
+      balanceEl.innerText = `Balance: ${data.balance}`;
+      energyEl.innerText = `Energy: ${data.energy}`;
+      energy = data.energy;
 
-        statusEl.innerText = "Account Loaded";
-        statusEl.className = "";
-
-        balanceEl.innerText = `Balance: ${data.balance}`;
-        energyEl.innerText = `Energy: ${data.energy}`;
-
-        energy = data.energy;
-        mineBtn.disabled = energy <= 0;
-
-      } catch {
-        statusEl.innerText = "Backend not reachable";
-        statusEl.className = "error";
-        mineBtn.disabled = true;
-      }
+      mineBtn.disabled = energy <= 0;
     }
 
     async function mine() {
-      if (energy <= 0) {
-        mineBtn.disabled = true;
-        return;
-      }
+      if (energy <= 0) return;
 
-      mineBtn.disabled = true;
+      const res = await fetch("http://127.0.0.1:8000/mine", {
+        method: "POST",
+        headers: { "X-Telegram-Init-Data": tg.initData }
+      });
 
-      try {
-        const res = await fetch("http://127.0.0.1:8000/mine", {
-          method: "POST",
-          headers: {
-            "X-Telegram-Init-Data": tg.initData
-          }
-        });
+      const data = await res.json();
 
-        const data = await res.json();
+      balanceEl.innerText = `Balance: ${data.balance}`;
+      energyEl.innerText = `Energy: ${data.energy}`;
+      energy = data.energy;
 
-        if (!res.ok) {
-          statusEl.innerText = data.detail || "Mining failed";
-          mineBtn.disabled = false;
-          return;
-        }
+      mineBtn.disabled = energy <= 0;
+    }
 
-        balanceEl.innerText = `Balance: ${data.balance}`;
-        energyEl.innerText = `Energy: ${data.energy}`;
-        energy = data.energy;
+    async function refill() {
+      const res = await fetch("http://127.0.0.1:8000/refill", {
+        method: "POST",
+        headers: { "X-Telegram-Init-Data": tg.initData }
+      });
 
-        mineBtn.disabled = energy <= 0;
-
-      } catch {
-        statusEl.innerText = "Network error";
-        mineBtn.disabled = false;
-      }
+      const data = await res.json();
+      energy = data.energy;
+      energyEl.innerText = `Energy: ${energy}`;
+      mineBtn.disabled = false;
     }
 
     loadProfile();
