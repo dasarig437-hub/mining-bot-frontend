@@ -58,7 +58,6 @@
   tg.ready();
   tg.expand();
 
-  // ✅ RENDER BACKEND (FINAL)
   const API_URL = "https://mining-bot-backend.onrender.com";
 
   const statusEl = document.getElementById("status");
@@ -81,16 +80,16 @@
 
     const data = await res.json();
 
-    statusEl.innerText = "Account Loaded";
     balanceEl.innerText = `Balance: ${data.balance}`;
     energyEl.innerText = `Energy: ${data.energy}`;
     energy = data.energy;
 
+    statusEl.innerText = "Ready";
     mineBtn.disabled = energy <= 0;
   }
 
   async function mine() {
-    if (energy <= 0) return;
+    mineBtn.disabled = true;
 
     const res = await fetch(`${API_URL}/mine`, {
       method: "POST",
@@ -99,11 +98,18 @@
 
     const data = await res.json();
 
+    if (!res.ok) {
+      statusEl.innerText = data.detail || "Slow down";
+      mineBtn.disabled = false;
+      return;
+    }
+
     balanceEl.innerText = `Balance: ${data.balance}`;
     energyEl.innerText = `Energy: ${data.energy}`;
     energy = data.energy;
 
     mineBtn.disabled = energy <= 0;
+    statusEl.innerText = "Mining…";
   }
 
   async function refill() {
@@ -113,9 +119,16 @@
     });
 
     const data = await res.json();
+
+    if (!res.ok) {
+      statusEl.innerText = "Refill failed";
+      return;
+    }
+
     energy = data.energy;
     energyEl.innerText = `Energy: ${energy}`;
     mineBtn.disabled = false;
+    statusEl.innerText = "Energy refilled";
   }
 
   mineBtn.onclick = mine;
@@ -124,5 +137,7 @@
   loadProfile();
 </script>
 
+
 </body>
 </html>
+
